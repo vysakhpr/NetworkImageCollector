@@ -1,6 +1,9 @@
+import threading
 nme_ip="127.0.0.1"
 nme_port=5005
 no_of_nodes=0
+event=threading.Event()
+lock=threading.Lock()
 
 
 class Nodes(object):
@@ -17,44 +20,85 @@ class Nodes(object):
 		self.rank=rank
 		
 	def set_ip_address(self,arg):
+		lock.acquire()
 		self.ip_address=arg
+		lock.release()
 
 	def set_battery(self,arg):
+		lock.acquire()
 		self.battery=arg
+		lock.release()
 
 	def set_packet_rate(self,arg):
+		lock.acquire()
 		self.packet_rate =arg
+		lock.release()
 
 	def set_queue_length(self,arg):
+		lock.acquire()
 		self.queue_length=arg
+		lock.release()
 
 	def set_rank(self,arg):
+		lock.acquire()
 		self.rank=arg
+		lock.release()
 
 	def add_parent(self,ip,ss,per):
+		lock.acquire()
+		if ip in self.parent_list:
+			lock.release()
+			return
 		self.parent_links.append(ParentLinks(ip,ss,per))
-		self.parent_list.append(ip)		
+		self.parent_list.append(ip)
+		lock.release()		
+
+	def remove_parent(self,ip):
+		lock.acquire()
+		self.parent_list.remove(ip)
+		lock.release()
 
 	def get_ip_address(self):
-		return self.ip_address
+		lock.acquire()
+		temp=self.ip_address
+		lock.release()
+		return temp
 
 	def get_battery(self):
-		return self.battery
+		lock.acquire()
+		temp=self.battery
+		lock.release()
+		return temp
 
 	def get_packet_rate(self):
-		return self.packet_rate
+		lock.acquire()
+		temp=self.packet_rate
+		lock.release()
+		return temp	
 
 	def get_queue_length(self):
-		return self.queue_length
+		lock.acquire()
+		temp=self.queue_length
+		lock.release()
+		return temp
 
 	def get_parent_links(self):
-		return self.parent_links
+		lock.acquire()
+		temp=self.parent_links
+		lock.release()
+		return temp
 
 	def get_parent_list(self):
-		return self.parent_list
+		lock.acquire()
+		temp=self.parent_list
+		lock.release()
+		return temp
 
 	def get_rank(self):
-		return self.rank
+		lock.acquire()
+		temp=self.rank
+		lock.release()
+		return temp
 
 
 
@@ -100,8 +144,22 @@ def display_network(node_list):
 		print node.get_rank()
 		print "Packet Data Rate:",
 		print node.get_packet_rate()
+		"""
+		print "No of parents:",
+		print len(node.get_parent_list())
+		"""
 		print "Parents:",
 		for parent in node.get_parent_list():
 			print parent+"\t",
+		print ""
+		print "=============================================="
+		
 
 
+def convert_neighbor_to_parent(graph_nodes):
+	for node in graph_nodes:
+		for parent_ip in node.get_parent_list():
+			parent_rank=graph_nodes[find_node(graph_nodes,parent_ip)].get_rank()
+			if parent_rank >= node.get_rank():
+				node.remove_parent(parent_ip)
+	return graph_nodes

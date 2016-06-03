@@ -1,41 +1,51 @@
 import  lib.DataStructures
 import socket
+import time
+import sys
 
-from coapthon.client.coap import CoAP
-from coapthon.client.helperclient import HelperClient
-from coapthon.messages.message import Message
-from coapthon.messages.request import Request
+from lib.coapthon.client.coap import CoAP
+from lib.coapthon.client.helperclient import HelperClient
+from lib.coapthon.messages.message import Message
+from lib.coapthon.messages.request import Request
 
 
         
-def init(graph_nodes):
+def init(graph_nodes,string):
 	ip_addresses=[line.rstrip('\n') for line in open('lib/addresses')]
 	try:
 		for ip in ip_addresses:			
 			host,port=parse_ipv6_uri(ip)
 			parent_ip=[]
-			client = HelperClient(server=(host, port))
-			node_details_response=client.get("Get-Packet-Rate")
-			contents=node_details_response.payload.split(";")
-			source=node_details_response.source[0]
-			source=source.split("::")[1]
-			#source=":".join(groups[4:])
-			source=format_suffix(source)
-			rank=contents[0]
-			no_of_parents=contents[1]
-			packet_rate=contents[2].strip()
-			#client.stop()
-			#client = HelperClient(server=(host, port))
-			parent_details_response=client.get("Get-Parent")
-			parents=parent_details_response.payload.split(";")
-			print parents
-			for parent in parents:
-				if parent.strip()!="":
-					parent_ip.append(parent.strip())
-			print parent_ip
-			client.stop()
-			
-			"""	
+
+
+			if string=="coapthon":
+				client = HelperClient(server=(host, port))
+				node_details_response=client.get("Get-Packet-Rate")
+				if node_details_response==None:
+					client.stop()
+					continue 
+				contents=node_details_response.payload.split(";")
+				source=node_details_response.source[0]
+				source=source.split("::")[1]
+				source=format_suffix(source)
+				rank=contents[0]
+				no_of_parents=contents[1]
+				packet_rate=contents[2].strip()
+				client.stop()
+				#time.sleep(10)
+				client = HelperClient(server=(host, port))
+				parent_details_response=client.get("Get-Parent")
+				if parent_details_response==None:
+					client.stop()
+					continue
+				parents=parent_details_response.payload.split(";")
+				#print parents
+				for parent in parents:
+					if parent.strip()!="":
+						parent_ip.append(parent.strip())
+				#print parent_ip
+				client.stop()
+				#time.sleep(10)
 			node_index=lib.DataStructures.find_node(graph_nodes,source)
 			if node_index==-1:
 				graph_nodes.append(lib.DataStructures.Nodes())
@@ -50,9 +60,8 @@ def init(graph_nodes):
 				graph_nodes[node_index].set_rank(rank)
 				for parent in parent_ip:
 					graph_nodes[node_index].add_parent(parent,0,1)
-			lib.DataStructures.display_network(graph_nodes)
-			"""
-
+		lib.DataStructures.display_network(graph_nodes)
+		return graph_nodes
 	except socket.error :
 			print "Cannot connect to RPL Network"
 			client.stop()
@@ -61,8 +70,6 @@ def init(graph_nodes):
 			print "Communication Disrupted by client"
 			client.stop()
 			print "Client Shutdown"
-		
-
 
 
 
