@@ -1,165 +1,173 @@
+from __future__ import  division
 import threading
-nme_ip="127.0.0.1"
-nme_port=5005
-no_of_nodes=0
 event=threading.Event()
 lock=threading.Lock()
-
-
+graph_nodes=[]
+no_of_nodes=6
+udp_packets_received_from_network=0
+initial_udp_packets=0
 class Nodes(object):
-	"""The Motes or Entities in the Underlying RPL Network---Store the nodes according to rank"""
-
-	def __init__(self,rank=0):
+	"""docstring for Nodes"""
+	def __init__(self, ip, battery, packets,packetrate,timestamp,udppacketssent ,framessent, framesdropped,link_cost_to_parent, preferred_parent):
 		super(Nodes, self).__init__()
-		self.ip_address="127.0.0.1"
-		self.battery=100
-		self.packet_rate=0
-		self.queue_length=0
-		self.parent_links=[]
+		lock.acquire()
+		self.ip = ip
+		self.battery= battery
+		self.udp_packets_sent=udppacketssent
+		self.packets=packets
+		self.packet_rate=packetrate
+		self.timestamp=timestamp
+		self.frames_sent=framessent
+		self.frames_dropped=framesdropped
+		self.link_cost_to_parent=link_cost_to_parent
+		self.preferred_parent=preferred_parent
 		self.parent_list=[]
-		self.rank=rank
-		
-	def set_ip_address(self,arg):
-		lock.acquire()
-		self.ip_address=arg
+		if framessent==0:
+			self.packet_delivery_ratio=100
+		else:
+			self.packet_delivery_ratio=(int(framessent)/(int(framessent)+int(framesdropped)))*100
 		lock.release()
 
-	def set_battery(self,arg):
+	def update_node(self,ip,battery,packets,packetrate,timestamp,udppacketssent,framessent,framesdropped,link_cost_to_parent, preferred_parent):
 		lock.acquire()
-		self.battery=arg
+		self.ip = ip
+		self.battery= battery
+		self.udp_packets_sent=udppacketssent
+		self.packets=packets
+		self.packet_rate=packetrate
+		self.timestamp=timestamp
+		self.frames_sent=framessent
+		self.frames_dropped=framesdropped
+		self.link_cost_to_parent=link_cost_to_parent
+		self.preferred_parent=preferred_parent
+		self.parent_list=[]
+		if framessent==0:
+			self.packet_delivery_ratio=100
+		else:
+			self.packet_delivery_ratio=(int(framessent)/(int(framessent)+int(framesdropped)))*100		
 		lock.release()
 
-	def set_packet_rate(self,arg):
+	def add_parent(self, ip, framessent, framesdropped):
 		lock.acquire()
-		self.packet_rate =arg
+		self.parent_list.append(ParentStats(ip,framessent,framesdropped))
 		lock.release()
 
-	def set_queue_length(self,arg):
+	def update_parent(self, ip, framessent, framesdropped):
 		lock.acquire()
-		self.queue_length=arg
+		for parent in self.parent_list:
+			if parent.get_ip()==ip:
+				parent.ip = ip
+				parent.frames_sent=framessent
+				parent.frames_dropped=framesdropped
+				if framessent==0:
+					parent.packet_delivery_ratio=100
+				else:
+					parent.packet_delivery_ratio=(int(framessent)/(int(framessent)+int(framesdropped)))*100
+				lock.release()
+				return True
 		lock.release()
+		return False
 
-	def set_rank(self,arg):
-		lock.acquire()
-		self.rank=arg
-		lock.release()
 
-	def add_parent(self,ip,ss,per):
-		lock.acquire()
-		if ip in self.parent_list:
-			lock.release()
-			return
-		self.parent_links.append(ParentLinks(ip,ss,per))
-		self.parent_list.append(ip)
-		lock.release()		
+	def get_udp_packets_sent(self):
+		return self.udp_packets_sent
 
-	def remove_parent(self,ip):
-		lock.acquire()
-		self.parent_list.remove(ip)
-		lock.release()
+	def get_ip(self):
+		return self.ip
 
-	def get_ip_address(self):
-		lock.acquire()
-		temp=self.ip_address
-		lock.release()
-		return temp
-
-	def get_battery(self):
-		lock.acquire()
-		temp=self.battery
-		lock.release()
-		return temp
+	def get_packets(self):
+		return self.packets
 
 	def get_packet_rate(self):
-		lock.acquire()
-		temp=self.packet_rate
-		lock.release()
-		return temp	
+		return self.packet_rate
 
-	def get_queue_length(self):
-		lock.acquire()
-		temp=self.queue_length
-		lock.release()
-		return temp
+	def get_timestamp(self):
+		return self.timestamp
 
-	def get_parent_links(self):
-		lock.acquire()
-		temp=self.parent_links
-		lock.release()
-		return temp
+	def get_battery(self):
+		return self.battery
 
-	def get_parent_list(self):
-		lock.acquire()
-		temp=self.parent_list
-		lock.release()
-		return temp
+	def get_frames_sent(self):
+		return self.frames_sent
 
-	def get_rank(self):
-		lock.acquire()
-		temp=self.rank
-		lock.release()
-		return temp
+	def get_frames_dropped(self):
+		return self.frames_dropped
 
+	def get_pdr(self):
+		return self.packet_delivery_ratio
 
+	def get_link_cost_to_parent(self):
+		return self.link_cost_to_parent
 
-
-class ParentLinks(object):
-	"""The Links eminating from a Node--Has IP, Signal Strength, Packet Error Ratio"""
-	def __init__(self, ip,ss,per):
-		super(ParentLinks, self).__init__()
-		self.parent_ip=ip
-		self.signal_strength=ss
-		self.packet_error_rate=per
-		
+	def get_preferred_parent():
+		return self.preferred_parent
 
 	def get_parent_ip(self):
-		return self.parent_ip
+		ip=[]
+		for parent in self.parent_list:
+			ip.append(parent.get_ip())
+		return ip
 
-	def get_signal_strength(self):
-		return self.signal_strength
+	def get_parent_stat_frames_sent(self,ip):
+		for parent in parent_list:
+			if parent.get_ip()==ip:
+				return parent.get_frames_sent()
+		return -1
 
-	def get_packet_error_rate(self):
-		return self.packet_error_rate
+	def get_parent_stat_frames_dropped(self,ip):
+		for parent in parent_list:
+			if parent.get_ip()==ip:
+				return parent.get_frames_dropped()
+		return -1
+
+	def get_parent_stat_pdr(self,ip):
+		for parent in parent_list:
+			if parent.get_ip()==ip:
+				return parent.get_pdr()
+		return -1
 
 
+class ParentStats(object):
+	"""docstring for ParentStats"""
+	def __init__(self, ip, framessent, framesdropped):
+		super(ParentStats, self).__init__()
+		self.ip = ip
+		self.frames_sent=framessent
+		self.frames_dropped=framesdropped
+		if framessent==0:
+			self.packet_delivery_ratio=100
+		else:
+			self.packet_delivery_ratio=(int(framessent)/(int(framessent)+int(framesdropped)))*100
 
-def find_node(node_list, ip):
-	global no_of_nodes
-	#print no_of_nodes
-	for i in range(no_of_nodes):
-		if node_list[i].get_ip_address()==ip:
-			return i
+	def get_ip(self):
+		return self.ip
+
+	def get_frames_sent(self):
+		return self.frames_sent
+
+	def get_frames_dropped(self):
+		return self.frames_dropped
+
+	def get_pdr(self):
+		return self.packet_delivery_ratio
+
+def find_node_index(ip):
+	for node in graph_nodes:
+		if node.get_ip()==ip:
+			return graph_nodes.index(node)
 	return -1
 
 
-def find_rank_of_ip(ip,node_list):
-	source=node_list[find_node(node_list,ip)]
-	return source.get_rank()
-
-def display_network(node_list):
-	for node in node_list:
-		print "Node IP:",
-		print node.get_ip_address()
-		print "Rank:",
-		print node.get_rank()
-		print "Packet Data Rate:",
-		print node.get_packet_rate()
-		"""
-		print "No of parents:",
-		print len(node.get_parent_list())
-		"""
-		print "Parents:",
-		for parent in node.get_parent_list():
-			print parent+"\t",
-		print ""
-		print "=============================================="
-		
-
-
-def convert_neighbor_to_parent(graph_nodes):
-	for node in graph_nodes:
-		for parent_ip in node.get_parent_list():
-			parent_rank=graph_nodes[find_node(graph_nodes,parent_ip)].get_rank()
-			if parent_rank >= node.get_rank():
-				node.remove_parent(parent_ip)
-	return graph_nodes
+def format_ip(ip):
+	ip_sections=ip.split(':')
+	ip=""
+	#print ip_sections
+	for section in ip_sections:
+		if section=="0000":
+			ip=ip+"0:"
+		else:
+			i=0
+			while(section[i]=="0"):
+				i=i+1
+			ip=ip+section[i:]+":"
+	return ip[:-1]	
